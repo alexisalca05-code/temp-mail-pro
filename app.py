@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import os
 import time
+import requests
 
 app = Flask(__name__)
 app.secret_key = "azvip_secret"
@@ -15,7 +16,7 @@ def home():
 def db():
     return sqlite3.connect("database.db")
 
-# ================= INIT DB (PRO - SIN BORRAR DATOS) =================
+# ================= INIT DB =================
 def init_db():
     conn = db()
 
@@ -121,13 +122,44 @@ def create_email():
 
     return redirect("/dashboard")
 
+# ================= INBOX PRO =================
+@app.route("/inbox")
+def inbox():
+
+    if "user" not in session:
+        return redirect("/login")
+
+    user = session["user"]
+
+    conn = db()
+    email = conn.execute(
+        "SELECT email_temp FROM users WHERE username=?",
+        (user,)
+    ).fetchone()
+    conn.close()
+
+    if not email or not email[0]:
+        return "❌ Primero crea un correo"
+
+    email = email[0]
+    login, domain = email.split("@")
+
+    url = f"https://www.1secmail.com/api/v1/?action=getMessages&login={login}&domain={domain}"
+
+    try:
+        messages = requests.get(url).json()
+    except:
+        messages = []
+
+    return render_template("inbox.html", messages=messages, email=email)
+
 # ================= LOGOUT =================
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
 
-# ================= RUN (RENDER FIX) =================
+# ================= RUN =================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)

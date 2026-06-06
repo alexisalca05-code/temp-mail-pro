@@ -1,0 +1,24 @@
+<h2>📬 Inbox</h2>
+
+<p><b>Correo:</b> {{email}}</p>
+
+<br>
+
+<a href="/dashboard">⬅ Volver</a>
+
+<hr>
+
+{% if messages %}
+    {% for m in messages %}
+        <div style="border:1px solid #ccc; padding:10px; margin:10px;">
+            <p><b>📨 From:</b> {{m.from}}</p>
+            <p><b>📌 Subject:</b> {{m.subject}}</p>
+
+            <a href="https://www.1secmail.com/api/v1/?action=readMessage&login={{email.split('@')[0]}}&domain={{email.split('@')[1]}}&id={{m.id}}" target="_blank">
+                📖 Ver mensaje completo
+            </a>
+        </div>
+    {% endfor %}
+{% else %}
+    <p>📭 No hay mensajes</p>
+{% endif %}
