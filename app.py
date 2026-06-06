@@ -83,40 +83,24 @@ def login():
 
     return render_template("login.html")
 
-# ================= DASHBOARD =================
+# ================= # ================= LOGOUT ================= =================
 @app.route("/dashboard")
 def dashboard():
     if "user" not in session:
         return redirect("/login")
 
-    return render_template(
-        "dashboard.html",
-        user=session["user"]
-    )
-@app.route("/create_email")
-def create_email():
-
-    if "user" not in session:
-        return redirect("/login")
-
     user = session["user"]
 
-    import time
-
-    email = f"AZVIP{int(time.time())}@1secmail.com"
-
     conn = db()
-
-    conn.execute(
-        "UPDATE users SET email_temp=? WHERE username=?",
-        (email, user)
-    )
-
-    conn.commit()
+    email = conn.execute(
+        "SELECT email_temp FROM users WHERE username=?",
+        (user,)
+    ).fetchone()
     conn.close()
 
-    return redirect("/dashboard")
+    email = email[0] if email else "No creado"
 
+    return render_template("dashboard.html", user=user, email=email)
 # ================= LOGOUT =================
 @app.route("/logout")
 def logout():
