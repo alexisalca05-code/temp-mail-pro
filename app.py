@@ -15,7 +15,7 @@ def home():
 def db():
     return sqlite3.connect("database.db")
 
-# ================= INIT DB =================
+# ================= INIT DB (PRO - SIN BORRAR DATOS) =================
 def init_db():
     conn = db()
 
@@ -50,7 +50,7 @@ def register():
             conn.commit()
         except sqlite3.IntegrityError:
             conn.close()
-            return "Usuario ya existe"
+            return "❌ Usuario ya existe"
 
         conn.close()
         return redirect("/login")
@@ -77,7 +77,7 @@ def login():
             session["user"] = user[1]
             return redirect("/dashboard")
 
-        return "Login incorrecto"
+        return "❌ Login incorrecto"
 
     return render_template("login.html")
 
@@ -127,11 +127,7 @@ def logout():
     session.clear()
     return redirect("/login")
 
-# ================= RUN =================
+# ================= RUN (RENDER FIX) =================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False
-    )
+    app.run(host="0.0.0.0", port=port, debug=False)
