@@ -93,6 +93,29 @@ def dashboard():
         "dashboard.html",
         user=session["user"]
     )
+@app.route("/create_email")
+def create_email():
+
+    if "user" not in session:
+        return redirect("/login")
+
+    user = session["user"]
+
+    import time
+
+    email = f"AZVIP{int(time.time())}@1secmail.com"
+
+    conn = db()
+
+    conn.execute(
+        "UPDATE users SET email_temp=? WHERE username=?",
+        (email, user)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/dashboard")
 
 # ================= LOGOUT =================
 @app.route("/logout")
