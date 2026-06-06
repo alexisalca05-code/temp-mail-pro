@@ -4,6 +4,10 @@ import sqlite3
 app = Flask(__name__)
 app.secret_key = "azvip_secret"
 
+@app.route("/")
+def home():
+    return redirect("/login")
+
 # ================= DB =================
 def db():
     return sqlite3.connect("database.db")
