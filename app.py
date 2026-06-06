@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import os
+import time
 
 app = Flask(__name__)
 app.secret_key = "azvip_secret"
 
+# ================= HOME =================
 @app.route("/")
 def home():
     return redirect("/login")
@@ -13,16 +15,12 @@ def home():
 def db():
     return sqlite3.connect("database.db")
 
-# ================= INIT =================
+# ================= INIT DB =================
 def init_db():
     conn = db()
 
-    # BORRA TABLA ANTERIOR
-    conn.execute("DROP TABLE IF EXISTS users")
-
-    # CREA TABLA NUEVA
     conn.execute("""
-    CREATE TABLE users (
+    CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
         password TEXT,
@@ -83,7 +81,7 @@ def login():
 
     return render_template("login.html")
 
-# ================= # ================= LOGOUT ================= =================
+# ================= DASHBOARD =================
 @app.route("/dashboard")
 def dashboard():
     if "user" not in session:
@@ -98,9 +96,31 @@ def dashboard():
     ).fetchone()
     conn.close()
 
-    email = email[0] if email else "No creado"
+    email = email[0] if email and email[0] else "No creado"
 
     return render_template("dashboard.html", user=user, email=email)
+
+# ================= CREATE EMAIL =================
+@app.route("/create_email")
+def create_email():
+
+    if "user" not in session:
+        return redirect("/login")
+
+    user = session["user"]
+
+    email = f"AZVIP{int(time.time())}@1secmail.com"
+
+    conn = db()
+    conn.execute(
+        "UPDATE users SET email_temp=? WHERE username=?",
+        (email, user)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect("/dashboard")
+
 # ================= LOGOUT =================
 @app.route("/logout")
 def logout():
