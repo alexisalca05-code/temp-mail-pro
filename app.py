@@ -1,97 +1,85 @@
-from flask import Flask, request, render_template
+from flask import Flask, render_template, request, redirect, session
 import sqlite3
-import requests
 
 app = Flask(__name__)
+app.secret_key = "azvip_secret"
 
-# ---------------- DB ----------------
+# ================= DB =================
 def db():
-    conn = sqlite3.connect("database.db")
+    return sqlite3.connect("database.db")
+
+# ================= INIT =================
+def init_db():
+    conn = db()
     conn.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tg_id TEXT,
-        email TEXT
+        username TEXT UNIQUE,
+        password TEXT,
+        email_temp TEXT
     )
     """)
     conn.commit()
-    return conn
-
-# ---------------- HOME ----------------
-@app.route("/")
-def home():
-    return """
-    <h1>📧 AZVIP Temp Mail SaaS</h1>
-    <p>Sistema activo</p>
-    """
-
-# ---------------- DASHBOARD ----------------
-@app.route("/dashboard")
-def dashboard():
-    tg_id = request.args.get("tg_id")
-
-    conn = db()
-    data = conn.execute(
-        "SELECT email FROM users WHERE tg_id=?",
-        (tg_id,)
-    ).fetchall()
     conn.close()
 
-    html = "<h2>📬 Tus correos</h2>"
+init_db()
 
-    if not data:
-        return html + "<p>No tienes correos aún</p>"
+# ================= REGISTER =================
+@app.route("/register", methods=["GET","POST"])
+def register():
+    if request.method == "POST":
+        u = request.form["username"]
+        p = request.form["password"]
 
-    for e in data:
-        email = e[0]
-        html += f"""
-        <div style="border:1px solid #ccc; padding:10px; margin:10px">
-            <b>{email}</b><br>
-            <a href="/inbox?email={email}">Ver inbox</a>
-        </div>
-        """
+        conn = db()
+        try:
+            conn.execute("INSERT INTO users (username,password) VALUES (?,?)", (u,p))
+            conn.commit()
+        except:
+            return "Usuario ya existe"
+        conn.close()
 
-    return html
+        return redirect("/login")
 
-# ---------------- INBOX ----------------
-@app.route("/inbox")
-def inbox():
-    email = request.args.get("email")
+    return render_template("register.html")
 
-    login, domain = email.split("@")
+# ================= LOGIN =================
+@app.route("/login", methods=["GET","POST"])
+def login():
+    if request.method == "POST":
+        u = request.form["username"]
+        p = request.form["password"]
 
-    url = f"https://www.1secmail.com/api/v1/?action=getMessages&login={login}&domain={domain}"
+        conn = db()
+        user = conn.execute(
+            "SELECT * FROM users WHERE username=? AND password=?",
+            (u,p)
+        ).fetchone()
+        conn.close()
 
-    try:
-        res = requests.get(url, timeout=10)
+        if user:
+            session["user"] = user[1]
+            return redirect("/dashboard")
 
-        if res.status_code == 200:
-            try:
-                messages = res.json()
-            except:
-                messages = []
-        else:
-            messages = []
+        return "Login incorrecto"
 
-    except:
-        messages = []
+    return render_template("login.html")
 
-    html = f"<h2>📬 Inbox: {email}</h2>"
+# ================= DASHBOARD =================
+@app.route("/dashboard")
+def dashboard():
+    if "user" not in session:
+        return redirect("/login")
 
-    if not messages:
-        return html + "<p>📭 Sin mensajes</p>"
+    return render_template("dashboard.html", user=session["user"])
 
-    for m in messages:
-        html += f"""
-        <div style="border:1px solid #ccc; margin:10px; padding:10px">
-            <b>De:</b> {m.get('from','N/A')}<br>
-            <b>Asunto:</b> {m.get('subject','Sin asunto')}<br>
-        </div>
-        """
+# ================= LOGOUT =================
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
 
-    return html
-
-# ---------------- RUN ----------------
+# ================= RUN (RENDER FIX) =================
 import os
 
 if __name__ == "__main__":
